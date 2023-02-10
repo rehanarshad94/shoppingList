@@ -60,17 +60,27 @@ componentDidMount() {
   });
 
    // create a reference to the active user's documents (shopping lists)
-   this.referenceShoppinglistUser = firebase.firestore().collection('shoppingLists').where("uid", "==", this.state.uid);
+   this.referenceShoppinglistUser = firebase
+   .firestore()
+   .collection('shoppingLists').where("uid", "==", this.state.uid);
    // listen for collection changes for current user 
    this.unsubscribeListUser = this.referenceShoppinglistUser.onSnapshot(this.onCollectionUpdate);
 }
+
+componentWillUnmount() {
+  // stop listening to authentication
+  this.authUnsubscribe();
+  // stop listening for changes
+  this.unsubscribeListUser();
+}
+
 
 onCollectionUpdate = (querySnapshot) => {
   const lists = [];
   // go through each document
   querySnapshot.forEach((doc) => {
     // get the QueryDocumentSnapshot's data
-    var data = doc.data();
+    let data = doc.data();
     lists.push({
       name: data.name,
       items: data.item.toString(),
@@ -89,16 +99,6 @@ addList() {
     item: ['eggs', 'pasta', 'veggies'],
     uid: this.state.uid,
   });
-}
-
-
-
-
- componentWillUnmount() {
-   // stop listening to authentication
-   this.authUnsubscribe();
-   // stop listening for changes
-   this.unsubscribeListUser();
 }
 
 
