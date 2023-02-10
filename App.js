@@ -15,7 +15,7 @@ export default class App extends Component {
     this.state= {
       lists: [],
       uid: 0,
-      loggedInText: 'Please Wait',
+      loggedInText: 'Please wait to be logged in',
     }
 
 
