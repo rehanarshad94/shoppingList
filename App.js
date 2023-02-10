@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { Component } from 'react';
-import { StyleSheet, Text, View, FlatList } from 'react-native';
+import { StyleSheet, Text, View, FlatList, Button } from 'react-native';
 
 
 
@@ -14,6 +14,8 @@ export default class App extends Component {
     super();
     this.state= {
       lists: [],
+      uid: 0,
+      loggedInText: 'Please Wait',
     }
 
 
@@ -32,10 +34,35 @@ export default class App extends Component {
     }
 
 
-    this.referenceShoppingLists = firebase
-    .firestore()
-    .collection('shoppingLists');
+    
+this.referenceShoppinglistUser = null;
+    
 
+}
+
+componentDidMount() {
+  // creating a references to shoppinglists collection
+  this.referenceShoppingLists = firebase
+  .firestore()
+  .collection('shoppingLists');
+
+  // listen to authentication events
+  this.authUnsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
+    if (!user) {
+      await firebase.auth().signInAnonymously();
+    }
+  
+    //update user state with currently active user data
+    this.setState({
+      uid: user.uid,
+      loggedInText: 'Hello there',
+    });
+  });
+
+   // create a reference to the active user's documents (shopping lists)
+   this.referenceShoppinglistUser = firebase.firestore().collection('shoppingLists').where("uid", "==", this.state.uid);
+   // listen for collection changes for current user 
+   this.unsubscribeListUser = this.referenceShoppinglistUser.onSnapshot(this.onCollectionUpdate);
 }
 
 onCollectionUpdate = (querySnapshot) => {
@@ -46,7 +73,7 @@ onCollectionUpdate = (querySnapshot) => {
     var data = doc.data();
     lists.push({
       name: data.name,
-      items: data.items.toString(),
+      items: data.item.toString(),
     });
   });
   this.setState({
@@ -54,14 +81,26 @@ onCollectionUpdate = (querySnapshot) => {
   });
 };
 
-componentDidMount() {
-  this.referenceShoppingLists = firebase.firestore().collection('shoppingLists');
-  this.unsubscribe = this.referenceShoppingLists.onSnapshot(this.onCollectionUpdate)
+
+
+addList() {
+  this.referenceShoppingLists.add({
+    name: 'TestList',
+    item: ['eggs', 'pasta', 'veggies'],
+    uid: this.state.uid,
+  });
 }
 
+
+
+
  componentWillUnmount() {
-   this.unsubscribe();
+   // stop listening to authentication
+   this.authUnsubscribe();
+   // stop listening for changes
+   this.unsubscribeListUser();
 }
+
 
 
 
@@ -70,16 +109,21 @@ componentDidMount() {
   render(){
     return (
       <View style={styles.container}>
-        
-        
-
+        <Text>{this.state.loggedInText}</Text>
+        <Text style={styles.text}>Shopping List</Text>
         <FlatList
         data={this.state.lists}
          renderItem={({ item }) =>
-         <Text>{item.name}: {item.items}</Text>}
+         <Text style={styles.item}>{item.name}: {item.items}</Text>}
         />
-        
-
+        <View style={styles.addButton}>
+        <Button 
+        title='Add Something'
+        onPress={() => {
+          this.addList()
+        }}
+        />
+        </View>
       </View>
     );
   }
@@ -100,5 +144,13 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 30,
-  }
+  },
+  addButton: {
+    backgroundColor: 'purple',
+    marginBottom: 40,
+    width: '80%',
+    height: '5%',
+    alignSelf: 'center',
+    position: 'relative',
+  },
 });
